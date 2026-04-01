@@ -1,5 +1,5 @@
 from groq import Groq
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from dotenv import load_dotenv
 import os
 
@@ -12,6 +12,7 @@ llm = Groq(
 )
 
 
-embeddings = HuggingFaceEmbeddings(
-    model_name=os.getenv('EMBEDDING_MODEL')
+embeddings = OpenAIEmbeddings(
+    api_key=os.getenv('OPENAI_API_KEY'),
+    model=os.getenv('EMBEDDING_MODEL')
 )
