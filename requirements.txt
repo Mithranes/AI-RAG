@@ -2,9 +2,10 @@ fastapi
 uvicorn
 langchain
 langchain-community
-langchain-ollama
+langchain-huggingface
 langchain-text-splitters
 faiss-cpu
 pypdf
 python-dotenv
 groq
+sentence-transformers

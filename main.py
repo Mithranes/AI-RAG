@@ -69,6 +69,7 @@ async def chat(message: MessageInput):
             )
 
             for chunk in stream:
+                print("CHUNK:", chunk)
                 token = getattr(chunk.choices[0].delta, "content", None)
                 if token:
                     yield f"data: {json.dumps({'token': token})}\n\n"

@@ -1,5 +1,5 @@
 from groq import Groq
-from langchain_ollama.embeddings import OllamaEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from dotenv import load_dotenv
 import os
 
@@ -12,6 +12,6 @@ llm = Groq(
 )
 
 
-embeddings = OllamaEmbeddings(
-    model=os.getenv('EMBEDDING_MODEL'),
+embeddings = HuggingFaceEmbeddings(
+    model_name=os.getenv('EMBEDDING_MODEL')
 )
