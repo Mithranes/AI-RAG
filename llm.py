@@ -12,7 +12,6 @@ llm = Groq(
 )
 
 
-embeddings = OpenAIEmbeddings(
-    api_key=os.getenv('OPENAI_API_KEY'),
-    model=os.getenv('EMBEDDING_MODEL')
+embeddings = FastEmbedEmbeddings(
+    model_name=os.getenv('EMBEDDING_MODEL')
 )
