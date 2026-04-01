@@ -9,3 +9,4 @@ pypdf
 python-dotenv
 groq
 python-multipart
+fastembed
