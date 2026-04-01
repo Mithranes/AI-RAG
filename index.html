@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Chat with LLaMA</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0e0e15;
+      color: #eee;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    #chat-container {
+      width: 100%;
+      max-width: 600px;
+      height: 80vh;
+      display: flex;
+      flex-direction: column;
+      background: #1a1a28;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 0 30px rgba(0,0,0,0.7);
+    }
+
+    h2 {
+      background: #0f0f1f;
+      text-align: center;
+      padding: 12px;
+      font-weight: 500;
+      font-size: 20px;
+      border-bottom: 1px solid #2a2a3f;
+      color: #8ab4f8;
+    }
+
+    #messages {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      scrollbar-width: thin;
+      scrollbar-color: #555 transparent;
+    }
+    #messages::-webkit-scrollbar { width: 8px; }
+    #messages::-webkit-scrollbar-thumb {
+      background: #555;
+      border-radius: 4px;
+    }
+
+    .message {
+      max-width: 75%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      line-height: 1.5;
+      font-size: 15px;
+      word-wrap: break-word;
+      transition: transform 0.1s;
+    }
+    .message:hover { transform: scale(1.02); }
+
+    .user {
+      background: #3a3a5c;
+      align-self: flex-end;
+      color: #cce0ff;
+    }
+    .assistant {
+      background: #272742;
+      align-self: flex-start;
+      color: #fff;
+      border: 1px solid #4444aa;
+    }
+
+    #input-row {
+      display: flex;
+      padding: 12px;
+      background: #0f0f1f;
+      gap: 10px;
+      border-top: 1px solid #2a2a3f;
+      align-items: center;
+    }
+
+    #file-label {
+      padding: 12px;
+      background: #1a1a28;
+      border: 1px solid #444;
+      border-radius: 12px;
+      cursor: pointer;
+      color: #8ab4f8;
+      font-size: 20px;
+      transition: border-color 0.2s;
+    }
+    #file-label:hover { border-color: #8ab4f8; }
+
+    #input {
+      flex: 1;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid #444;
+      background: #1a1a28;
+      color: #eee;
+      font-size: 15px;
+      outline: none;
+    }
+    #input:focus { border-color: #8ab4f8; }
+
+    #send {
+      padding: 12px 20px;
+      border-radius: 12px;
+      border: none;
+      background: #4f46e5;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    #send:hover { background: #4338ca; transform: scale(1.05); }
+    #send:disabled { background: #333; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <div id="chat-container">
+    <h2>🤖 LLaMA Chat</h2>
+    <div id="messages"></div>
+    <div id="input-row">
+      <label id="file-label" for="file-upload">📎</label>
+      <input type="file" id="file-upload" accept=".pdf,.txt" style="display: none">
+      <input type="text" id="input" placeholder="Type your message...">
+      <button id="send">Send</button>
+    </div>
+  </div>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const messagesEl = document.getElementById('messages')
+    const inputEl = document.getElementById('input')
+    const sendBtn = document.getElementById('send')
+    const fileUpload = document.getElementById('file-upload')
+    const history = []
+
+    // file upload handling
+    fileUpload.addEventListener('change', async () => {
+      const file = fileUpload.files[0]
+      if (!file) return
+
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const notice = document.createElement('div')
+      notice.className = 'message assistant'
+      notice.textContent = `Uploading ${file.name}...`
+      messagesEl.appendChild(notice)
+      messagesEl.scrollTop = messagesEl.scrollHeight
+
+      const response = await fetch('/upload', {
+        method: 'POST',
+        body: formData
+      })
+
+      const result = await response.json()
+
+        // ← check for HTTP error status
+      if (!response.ok) {
+      notice.textContent = `⚠️ ${result.detail}`
+      notice.style.color = '#ff6b6b'
+      return
+      }
+
+      notice.textContent = `✅ ${result.message}`
+      messagesEl.scrollTop = messagesEl.scrollHeight
+    })
+
+    // chat handling
+    sendBtn.addEventListener('click', async () => {
+      const text = inputEl.value.trim()
+      if (!text) return
+
+      const userMsg = document.createElement('div')
+      userMsg.textContent = text
+      userMsg.className = 'message user'
+      messagesEl.appendChild(userMsg)
+
+      inputEl.value = ''
+      sendBtn.disabled = true
+
+      const assistantMsg = document.createElement('div')
+      assistantMsg.className = 'message assistant'
+      assistantMsg.textContent = ''
+      messagesEl.appendChild(assistantMsg)
+
+      const response = await fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, history })
+      })
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let fullResponse = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop()
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const data = line.slice(6)
+          if (data === '[DONE]') break
+          const chunk = JSON.parse(data)
+          // handle error from backend
+          if (chunk.error) {
+          assistantMsg.textContent = `⚠️ ${chunk.error}`
+          assistantMsg.style.color = '#ff6b6b'
+          break
+          }
+          assistantMsg.textContent += chunk.token
+          fullResponse += chunk.token
+          messagesEl.scrollTop = messagesEl.scrollHeight
+        }
+      }
+
+      history.push({ role: 'user', content: text })
+      history.push({ role: 'assistant', content: fullResponse })
+
+      sendBtn.disabled = false
+      inputEl.focus()
+    })
+
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendBtn.click()
+    })
+  })
+  </script>
+</body>
+</html>
