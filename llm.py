@@ -1,5 +1,5 @@
 from groq import Groq
-from langchain_openai import OpenAIEmbeddings
+from langchain_community.embeddings import FastEmbedEmbeddings
 from dotenv import load_dotenv
 import os
 
