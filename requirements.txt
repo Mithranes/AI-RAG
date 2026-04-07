@@ -9,4 +9,6 @@ pypdf
 python-dotenv
 groq
 python-multipart
-fastembed
+rank_bm25
+langchain-classic
+chromadb

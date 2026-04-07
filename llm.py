@@ -1,5 +1,5 @@
 from groq import Groq
-from langchain_community.embeddings import FastEmbedEmbeddings
+from langchain_ollama import OllamaEmbeddings
 from dotenv import load_dotenv
 import os
 
@@ -12,6 +12,6 @@ llm = Groq(
 )
 
 
-embeddings = FastEmbedEmbeddings(
-    model_name=os.getenv('EMBEDDING_MODEL')
+embeddings = OllamaEmbeddings(
+    model="nomic-embed-text"
 )

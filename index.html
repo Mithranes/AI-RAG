@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Chat with LLaMA</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -15,118 +16,169 @@
       height: 100vh;
     }
 
+    /* ── AUTH ── */
+    #auth-container {
+      width: 100%;
+      max-width: 380px;
+      background: #1a1a28;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 0 30px rgba(0,0,0,0.7);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    #auth-container h2 { text-align: center; color: #8ab4f8; font-weight: 500; font-size: 20px; }
+    .auth-input {
+      width: 100%; padding: 12px 16px; border-radius: 12px;
+      border: 1px solid #444; background: #0f0f1f; color: #eee; font-size: 15px; outline: none;
+    }
+    .auth-input:focus { border-color: #8ab4f8; }
+    .auth-btn {
+      width: 100%; padding: 12px; border-radius: 12px; border: none;
+      background: #4f46e5; color: white; font-weight: 600; font-size: 15px; cursor: pointer; transition: background 0.2s;
+    }
+    .auth-btn:hover { background: #4338ca; }
+    #auth-error { color: #ff6b6b; font-size: 13px; text-align: center; min-height: 18px; }
+    #auth-toggle { text-align: center; font-size: 13px; color: #888; }
+    #auth-toggle span { color: #8ab4f8; cursor: pointer; text-decoration: underline; }
+
+    /* ── CHAT ── */
     #chat-container {
       width: 100%;
-      max-width: 600px;
-      height: 80vh;
-      display: flex;
+      max-width: 700px;
+      height: 88vh;
+      display: none;
       flex-direction: column;
       background: #1a1a28;
       border-radius: 16px;
       overflow: hidden;
       box-shadow: 0 0 30px rgba(0,0,0,0.7);
     }
-
-    h2 {
+    #chat-header {
       background: #0f0f1f;
-      text-align: center;
-      padding: 12px;
-      font-weight: 500;
-      font-size: 20px;
-      border-bottom: 1px solid #2a2a3f;
-      color: #8ab4f8;
-    }
-
-    #messages {
-      flex: 1;
-      padding: 16px;
-      overflow-y: auto;
       display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid #2a2a3f;
+    }
+    #chat-header h2 { color: #8ab4f8; font-weight: 500; font-size: 20px; }
+    #header-right { display: flex; gap: 8px; align-items: center; }
+    .header-btn {
+      padding: 6px 12px; border-radius: 8px; border: 1px solid #444;
+      background: transparent; font-size: 13px; cursor: pointer; transition: border-color 0.2s, color 0.2s;
+    }
+    #files-btn { color: #8ab4f8; }
+    #files-btn:hover { border-color: #8ab4f8; }
+    #clear-btn { color: #aaa; }
+    #clear-btn:hover { border-color: #ff6b6b; color: #ff6b6b; }
+    #logout-btn { color: #888; }
+    #logout-btn:hover { border-color: #ff6b6b; color: #ff6b6b; }
+
+    /* ── FILE PANEL ── */
+    #files-panel {
+      background: #0f0f1f;
+      border-bottom: 1px solid #2a2a3f;
+      padding: 12px 16px;
+      display: none;
       flex-direction: column;
-      gap: 12px;
-      scrollbar-width: thin;
-      scrollbar-color: #555 transparent;
+      gap: 8px;
+    }
+    #files-panel-title { font-size: 13px; color: #888; margin-bottom: 4px; }
+    .file-item {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #1a1a28; border: 1px solid #2a2a3f; border-radius: 8px; padding: 8px 12px; font-size: 14px;
+    }
+    .file-item span { color: #cce0ff; }
+    .file-delete {
+      background: transparent; border: 1px solid #444; color: #ff6b6b;
+      border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; transition: background 0.2s;
+    }
+    .file-delete:hover { background: #ff6b6b22; border-color: #ff6b6b; }
+    #files-empty { font-size: 13px; color: #555; text-align: center; padding: 8px 0; }
+
+    /* ── MESSAGES ── */
+    #messages {
+      flex: 1; padding: 16px; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 12px;
+      scrollbar-width: thin; scrollbar-color: #555 transparent;
     }
     #messages::-webkit-scrollbar { width: 8px; }
-    #messages::-webkit-scrollbar-thumb {
-      background: #555;
-      border-radius: 4px;
-    }
-
+    #messages::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
     .message {
-      max-width: 75%;
-      padding: 12px 16px;
-      border-radius: 12px;
-      line-height: 1.5;
-      font-size: 15px;
-      word-wrap: break-word;
-      transition: transform 0.1s;
+      max-width: 75%; padding: 12px 16px; border-radius: 12px;
+      line-height: 1.5; font-size: 15px; word-wrap: break-word; transition: transform 0.1s;
     }
     .message:hover { transform: scale(1.02); }
+    .user { background: #3a3a5c; align-self: flex-end; color: #cce0ff; }
+    .assistant { background: #272742; align-self: flex-start; color: #fff; border: 1px solid #4444aa; }
+    .assistant p { margin-bottom: 8px; }
+    .assistant ul, .assistant ol { padding-left: 20px; margin-bottom: 8px; }
+    .assistant li { margin-bottom: 4px; }
+    .assistant strong { color: #8ab4f8; }
+    .assistant h1, .assistant h2, .assistant h3 { margin-bottom: 8px; color: #8ab4f8; }
+    .citations { font-size: 12px; color: #8ab4f8; margin-top: 8px; padding-top: 6px; border-top: 1px solid #2a2a3f; }
+    #loading-history { font-size: 13px; color: #555; text-align: center; padding: 16px; }
 
-    .user {
-      background: #3a3a5c;
-      align-self: flex-end;
-      color: #cce0ff;
-    }
-    .assistant {
-      background: #272742;
-      align-self: flex-start;
-      color: #fff;
-      border: 1px solid #4444aa;
-    }
-
+    /* ── INPUT ── */
     #input-row {
-      display: flex;
-      padding: 12px;
-      background: #0f0f1f;
-      gap: 10px;
-      border-top: 1px solid #2a2a3f;
-      align-items: center;
+      display: flex; padding: 12px; background: #0f0f1f;
+      gap: 10px; border-top: 1px solid #2a2a3f; align-items: center;
     }
-
     #file-label {
-      padding: 12px;
-      background: #1a1a28;
-      border: 1px solid #444;
-      border-radius: 12px;
-      cursor: pointer;
-      color: #8ab4f8;
-      font-size: 20px;
-      transition: border-color 0.2s;
+      padding: 12px; background: #1a1a28; border: 1px solid #444;
+      border-radius: 12px; cursor: pointer; color: #8ab4f8; font-size: 20px; transition: border-color 0.2s;
     }
     #file-label:hover { border-color: #8ab4f8; }
-
     #input {
-      flex: 1;
-      padding: 12px 16px;
-      border-radius: 12px;
-      border: 1px solid #444;
-      background: #1a1a28;
-      color: #eee;
-      font-size: 15px;
-      outline: none;
+      flex: 1; padding: 12px 16px; border-radius: 12px; border: 1px solid #444;
+      background: #1a1a28; color: #eee; font-size: 15px; outline: none;
     }
     #input:focus { border-color: #8ab4f8; }
-
     #send {
-      padding: 12px 20px;
-      border-radius: 12px;
-      border: none;
-      background: #4f46e5;
-      color: white;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
+      padding: 12px 20px; border-radius: 12px; border: none;
+      background: #4f46e5; color: white; font-weight: 600; cursor: pointer; transition: background 0.2s, transform 0.1s;
     }
     #send:hover { background: #4338ca; transform: scale(1.05); }
     #send:disabled { background: #333; cursor: not-allowed; }
   </style>
 </head>
 <body>
+
+  <!-- AUTH -->
+  <div id="auth-container">
+    <h2 id="auth-title">🤖 LLaMA Chat</h2>
+    <input class="auth-input" type="email" id="auth-email" placeholder="Email">
+    <input class="auth-input" type="password" id="auth-password" placeholder="Password">
+    <div id="auth-error"></div>
+    <button class="auth-btn" id="auth-submit">Log in</button>
+    <p id="auth-toggle">
+      <span id="auth-toggle-text">Don't have an account?</span>
+      <span id="auth-switch"> Register</span>
+    </p>
+  </div>
+
+  <!-- CHAT -->
   <div id="chat-container">
-    <h2>🤖 LLaMA Chat</h2>
-    <div id="messages"></div>
+    <div id="chat-header">
+      <h2>🤖 LLaMA Chat</h2>
+      <div id="header-right">
+        <button class="header-btn" id="files-btn">📄 Files</button>
+        <button class="header-btn" id="clear-btn">🗑 Clear chat</button>
+        <button class="header-btn" id="logout-btn">Log out</button>
+      </div>
+    </div>
+
+    <div id="files-panel">
+      <div id="files-panel-title">Uploaded files</div>
+      <div id="files-list"></div>
+    </div>
+
+    <div id="messages">
+      <div id="loading-history">Loading history…</div>
+    </div>
+
     <div id="input-row">
       <label id="file-label" for="file-upload">📎</label>
       <input type="file" id="file-upload" accept=".pdf,.txt" style="display: none">
@@ -137,17 +189,228 @@
 
   <script>
   document.addEventListener('DOMContentLoaded', () => {
-    const messagesEl = document.getElementById('messages')
-    const inputEl = document.getElementById('input')
-    const sendBtn = document.getElementById('send')
-    const fileUpload = document.getElementById('file-upload')
-    const history = []
 
-    // file upload handling
+    let authToken = localStorage.getItem('authToken') || ''
+    let isLogin = true
+    let history = []  // kept in sync with Supabase
+
+    const authContainer  = document.getElementById('auth-container')
+    const chatContainer  = document.getElementById('chat-container')
+    const authTitle      = document.getElementById('auth-title')
+    const authEmail      = document.getElementById('auth-email')
+    const authPassword   = document.getElementById('auth-password')
+    const authError      = document.getElementById('auth-error')
+    const authSubmit     = document.getElementById('auth-submit')
+    const authSwitch     = document.getElementById('auth-switch')
+    const authToggleText = document.getElementById('auth-toggle-text')
+    const logoutBtn      = document.getElementById('logout-btn')
+    const clearBtn       = document.getElementById('clear-btn')
+    const filesBtn       = document.getElementById('files-btn')
+    const filesPanel     = document.getElementById('files-panel')
+    const filesList      = document.getElementById('files-list')
+    const messagesEl     = document.getElementById('messages')
+    const inputEl        = document.getElementById('input')
+    const sendBtn        = document.getElementById('send')
+    const fileUpload     = document.getElementById('file-upload')
+
+    function showChat() {
+      authContainer.style.display = 'none'
+      chatContainer.style.display = 'flex'
+      loadHistory()
+      loadFiles()
+    }
+    function showAuth() {
+      authContainer.style.display = 'flex'
+      chatContainer.style.display = 'none'
+    }
+
+    if (authToken) showChat()
+    else {
+      document.getElementById('loading-history').style.display = 'none'
+      showAuth()
+    }
+
+    // ── TOGGLE LOGIN/REGISTER ──
+    authSwitch.addEventListener('click', () => {
+      isLogin = !isLogin
+      authTitle.textContent      = isLogin ? '🤖 LLaMA Chat' : '🤖 Create Account'
+      authSubmit.textContent     = isLogin ? 'Log in' : 'Register'
+      authToggleText.textContent = isLogin ? "Don't have an account?" : 'Already have an account?'
+      authSwitch.textContent     = isLogin ? ' Register' : ' Log in'
+      authError.textContent      = ''
+    })
+
+    // ── AUTH SUBMIT ──
+    authSubmit.addEventListener('click', async () => {
+      const email    = authEmail.value.trim()
+      const password = authPassword.value
+      authError.textContent = ''
+      if (!email || !password) { authError.textContent = 'Please fill in both fields.'; return }
+
+      authSubmit.disabled = true
+      authSubmit.textContent = isLogin ? 'Logging in…' : 'Registering…'
+
+      try {
+        const res  = await fetch(isLogin ? '/login' : '/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        })
+        const data = await res.json()
+        if (!res.ok) { authError.textContent = data.detail || 'Something went wrong.'; return }
+
+        if (isLogin) {
+          authToken = data.access_token
+          localStorage.setItem('authToken', authToken)
+          showChat()
+        } else {
+          authError.style.color  = '#4ade80'
+          authError.textContent  = 'Registered! Check your email, then log in.'
+          isLogin = true
+          authTitle.textContent      = '🤖 LLaMA Chat'
+          authSubmit.textContent     = 'Log in'
+          authToggleText.textContent = "Don't have an account?"
+          authSwitch.textContent     = ' Register'
+        }
+      } catch (e) {
+        authError.textContent = 'Network error. Is the server running?'
+      } finally {
+        authSubmit.disabled    = false
+        authSubmit.textContent = isLogin ? 'Log in' : 'Register'
+      }
+    })
+
+    ;[authEmail, authPassword].forEach(el => {
+      el.addEventListener('keydown', e => { if (e.key === 'Enter') authSubmit.click() })
+    })
+
+    // ── LOGOUT ──
+    logoutBtn.addEventListener('click', () => {
+      localStorage.removeItem('authToken')
+      authToken = ''
+      history   = []
+      authEmail.value    = ''
+      authPassword.value = ''
+      authError.style.color = '#ff6b6b'
+      authError.textContent = ''
+      messagesEl.innerHTML  = '<div id="loading-history">Loading history…</div>'
+      showAuth()
+    })
+
+    // ── LOAD HISTORY ──
+    async function loadHistory() {
+      try {
+        const res  = await fetch('/history', { headers: { 'Authorization': `Bearer ${authToken}` } })
+        const data = await res.json()
+
+        document.getElementById('loading-history')?.remove()
+
+        history = data.history  // restore history array for context
+
+        if (history.length === 0) return
+
+        history.forEach(msg => renderMessage(msg.role, msg.content))
+        messagesEl.scrollTop = messagesEl.scrollHeight
+      } catch (e) {
+        document.getElementById('loading-history').textContent = 'Could not load history.'
+      }
+    }
+
+    // ── CLEAR HISTORY ──
+    clearBtn.addEventListener('click', async () => {
+      if (!confirm('Clear all chat history?')) return
+      try {
+        await fetch('/history', {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        })
+        history = []
+        messagesEl.innerHTML = ''
+      } catch (e) {
+        alert('Failed to clear history.')
+      }
+    })
+
+    // ── RENDER A MESSAGE ──
+    function renderMessage(role, content) {
+      const msg = document.createElement('div')
+      msg.className = `message ${role}`
+      if (role === 'assistant') {
+        const contentDiv = document.createElement('div')
+        contentDiv.innerHTML = marked.parse(content)
+        msg.appendChild(contentDiv)
+      } else {
+        msg.textContent = content
+      }
+      messagesEl.appendChild(msg)
+      return msg
+    }
+
+    // ── FILES PANEL ──
+    filesBtn.addEventListener('click', () => {
+      const open = filesPanel.style.display === 'flex'
+      filesPanel.style.display = open ? 'none' : 'flex'
+      if (!open) loadFiles()
+    })
+
+    async function loadFiles() {
+      try {
+        const res  = await fetch('/files', { headers: { 'Authorization': `Bearer ${authToken}` } })
+        const data = await res.json()
+        renderFiles(data.files)
+      } catch (e) {
+        filesList.innerHTML = '<div id="files-empty">Could not load files.</div>'
+      }
+    }
+
+    function renderFiles(files) {
+      if (!files || files.length === 0) {
+        filesList.innerHTML = '<div id="files-empty">No files uploaded yet.</div>'
+        return
+      }
+      filesList.innerHTML = ''
+      files.forEach(filename => {
+        const item = document.createElement('div')
+        item.className = 'file-item'
+        item.innerHTML = `<span>📄 ${filename}</span><button class="file-delete" data-name="${filename}">Remove</button>`
+        item.querySelector('.file-delete').addEventListener('click', () => deleteFile(filename, item))
+        filesList.appendChild(item)
+      })
+    }
+
+    async function deleteFile(filename, itemEl) {
+      itemEl.querySelector('.file-delete').disabled = true
+      itemEl.querySelector('.file-delete').textContent = 'Removing…'
+      try {
+        const res = await fetch(`/files/${encodeURIComponent(filename)}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        })
+        if (res.ok) {
+          itemEl.remove()
+          if (filesList.children.length === 0) filesList.innerHTML = '<div id="files-empty">No files uploaded yet.</div>'
+          const notice = document.createElement('div')
+          notice.className = 'message assistant'
+          notice.textContent = `🗑️ ${filename} removed from context.`
+          messagesEl.appendChild(notice)
+          messagesEl.scrollTop = messagesEl.scrollHeight
+        } else {
+          const data = await res.json()
+          alert(data.detail || 'Failed to remove file.')
+          itemEl.querySelector('.file-delete').disabled = false
+          itemEl.querySelector('.file-delete').textContent = 'Remove'
+        }
+      } catch (e) {
+        alert('Network error.')
+        itemEl.querySelector('.file-delete').disabled = false
+        itemEl.querySelector('.file-delete').textContent = 'Remove'
+      }
+    }
+
+    // ── FILE UPLOAD ──
     fileUpload.addEventListener('change', async () => {
       const file = fileUpload.files[0]
       if (!file) return
-
       const formData = new FormData()
       formData.append('file', file)
 
@@ -159,55 +422,52 @@
 
       const response = await fetch('/upload', {
         method: 'POST',
+        headers: { 'Authorization': `Bearer ${authToken}` },
         body: formData
       })
-
       const result = await response.json()
-
-        // ← check for HTTP error status
-      if (!response.ok) {
-      notice.textContent = `⚠️ ${result.detail}`
-      notice.style.color = '#ff6b6b'
-      return
-      }
-
-      notice.textContent = `✅ ${result.message}`
+      notice.textContent = response.ok ? `✅ ${result.message}` : `⚠️ ${result.detail}`
+      if (!response.ok) notice.style.color = '#ff6b6b'
       messagesEl.scrollTop = messagesEl.scrollHeight
+      loadFiles()
     })
 
-    // chat handling
+    // ── CHAT ──
     sendBtn.addEventListener('click', async () => {
       const text = inputEl.value.trim()
       if (!text) return
 
-      const userMsg = document.createElement('div')
-      userMsg.textContent = text
-      userMsg.className = 'message user'
-      messagesEl.appendChild(userMsg)
-
-      inputEl.value = ''
+      renderMessage('user', text)
+      inputEl.value    = ''
       sendBtn.disabled = true
 
       const assistantMsg = document.createElement('div')
       assistantMsg.className = 'message assistant'
-      assistantMsg.textContent = ''
       messagesEl.appendChild(assistantMsg)
+      const contentDiv = document.createElement('div')
+      assistantMsg.appendChild(contentDiv)
 
       const response = await fetch('/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
         body: JSON.stringify({ text, history })
       })
 
-      const reader = response.body.getReader()
+      if (response.status === 401) {
+        localStorage.removeItem('authToken')
+        authToken = ''
+        showAuth()
+        authError.textContent = 'Session expired. Please log in again.'
+        return
+      }
+
+      const reader  = response.body.getReader()
       const decoder = new TextDecoder()
-      let buffer = ''
-      let fullResponse = ''
+      let buffer = '', fullResponse = '', citationDiv = null
 
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
-
         buffer += decoder.decode(value, { stream: true })
         const lines = buffer.split('\n')
         buffer = lines.pop()
@@ -217,18 +477,32 @@
           const data = line.slice(6)
           if (data === '[DONE]') break
           const chunk = JSON.parse(data)
-          // handle error from backend
+
           if (chunk.error) {
-          assistantMsg.textContent = `⚠️ ${chunk.error}`
-          assistantMsg.style.color = '#ff6b6b'
-          break
+            contentDiv.textContent = `⚠️ ${chunk.error}`
+            contentDiv.style.color = '#ff6b6b'
+            break
           }
-          assistantMsg.textContent += chunk.token
-          fullResponse += chunk.token
-          messagesEl.scrollTop = messagesEl.scrollHeight
+          if (chunk.citations && chunk.citations.length > 0) {
+            citationDiv = document.createElement('div')
+            citationDiv.className = 'citations'
+            const pages = [...new Set(chunk.citations
+              .map(c => c.page !== null ? `Page ${c.page + 1}` : c.source)
+              .filter(Boolean)
+            )]
+            citationDiv.textContent = pages.length > 0 ? `📄 Sources: ${pages.join(', ')}` : ''
+          }
+          if (chunk.token) {
+            fullResponse += chunk.token
+            contentDiv.innerHTML = marked.parse(fullResponse)
+            messagesEl.scrollTop = messagesEl.scrollHeight
+          }
         }
       }
 
+      if (citationDiv && citationDiv.textContent) assistantMsg.appendChild(citationDiv)
+
+      // update local history array so context is kept for next message
       history.push({ role: 'user', content: text })
       history.push({ role: 'assistant', content: fullResponse })
 
@@ -236,9 +510,7 @@
       inputEl.focus()
     })
 
-    inputEl.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') sendBtn.click()
-    })
+    inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') sendBtn.click() })
   })
   </script>
 </body>
